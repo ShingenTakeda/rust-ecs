@@ -21,7 +21,7 @@ impl <T> VecStore<T>{
 }
 
 impl <T> EcsStore<T> for VecStore<T>{
-    fn add(&mut self, gen: GenData, t: T){
+    fn add(&mut self, g: GenData, t: T){
         while g.pos >= self.items.len(){
             self.items.push(None)
         }
@@ -56,7 +56,7 @@ impl <T> EcsStore<T> for VecStore<T>{
     }
 
     fn for_each<F: FnMut(GenData, &T)>(&self, mut f:F){
-        for(n,x) in self.items.iter_mut().enumerate(){
+        for(n,x) in self.items.iter().enumerate(){
             if let Some((g,d)) = x {
                 f(GenData{gen: *g, pos:n}, d);
             }
@@ -69,5 +69,34 @@ impl <T> EcsStore<T> for VecStore<T>{
                 f(GenData{gen: *g, pos:n}, d);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test{
+    use super::*;
+    use crate::gen::{GenData, GenManager};
+
+    #[test]
+    fn test_store_can_drop() {
+        let mut gm = GenManager::new();
+        let mut vs = VecStore::new();
+
+        vs.add(gm.next(), 3);
+        vs.add(gm.next(), 2);
+        vs.add(gm.next(), 6);
+
+        let g4 = gm.next();
+        vs.add(g4, 6);
+
+        vs.for_each_mut(|g, d| *d+=2);
+
+        assert_eq!(vs.get(g4), Some(&8));
+
+        vs.drop(g4);
+
+
+        //Should fail
+        assert_eq!(vs.get(g4), None);
     }
 }
